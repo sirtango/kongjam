@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Kongjam</title>
+	<style>
+	
+.container {
+	position: absolute;
+	width: 100%;
+}
+
+@media only screen and (min-width: 800px) {
+	.container {
+		width: 800px;
+	}
+}
+
+	</style>
+
+	<script type="text/javascript" src="libs/jquery.min.js"></script>
+	<script type="text/javascript" src="libs/three.min.js"></script>
+	<script type="text/javascript" src="libs/Detector.js"></script>
+	<script type="text/javascript" src="libs/CanvasRenderer.js"></script>
+	<script type="text/javascript" src="libs/physi.js"></script>
+	<script type="text/javascript" src="libs/Tween.js"></script>
+	<script type="text/javascript" src="libs/microcache.js"></script>
+
+	<!-- Scenes !-->
+	<script type="text/javascript" src="scenes/mainScene.js"></script>
+
+	<script type="text/javascript">
+<!--
+"use strict";
+
+Physijs.scripts.worker	= "libs/physijs_worker.js";
+Physijs.scripts.ammo	= "ammo.js";
+
+// GLOBALS
+var renderer,
+	scene;		// current scene
+
+var requestAnimationFrame = 
+	window.requestAnimationFrame || 
+	window.mozRequestAnimationFrame || 
+	window.webkitRequestAnimationFrame || 
+	window.msRequestAnimationFrame;
+
+// Resize offset for full canvas
+var renderMarginWide = .015;
+var windowAspect = 600 / 800;
+
+var SceneManager = (function () {
+	return {
+		setScene: function (sceneName) {
+			scene = new window[sceneName]();
+		}
+	}
+})();
+
+var ResourceManager = (function () {
+	var loadingManager;
+	var textureLoader;
+	var JSONLoader;
+
+	var textures = [];
+	var models = [];
+
+	function loadResources () {
+		textures.forEach(function (element) {
+			textureLoader.load(element, function (loadedElement) {
+				renderer._textureCache.getSet(
+					element 						// cache this item by its filename
+						.replace(/^.*[\\\/]/, "")	// remove folders from filename (basename)
+						.replace(/\.[^/.]+$/, ""),	// remove extension
+					loadedElement
+				);
+			})
+		});
+
+		models.forEach(function (element) {
+			JSONLoader.load(element, function (geometry, materials) {
+				renderer._modelCache.getSet(
+					element 						// cache this item by its filename
+						.replace(/^.*[\\\/]/, "")	// remove folders from filename (basename)
+						.replace(/\.[^/.]+$/, ""),	// remove extension
+					new THREE.Mesh(geometry, new THREE.MeshFaceMaterial(materials))
+				);
+			});
+		});
+	}
+
+	return {
+		init: function () {
+			loadingManager = new THREE.LoadingManager();
+			loadingManager.onLoad = function () {
+				//SceneManager.setScene("mainScene");
+				//render();
+			};
+			loadingManager.onProgress = function (item, loaded, total) {
+				self.loadedPercent = loaded / total;
+			};
+
+			textureLoader = new THREE.TextureLoader(loadingManager);
+			JSONLoader = new THREE.JSONLoader(loadingManager);
+			renderer._textureCache = new MicroCache();
+			renderer._modelCache = new MicroCache();
+
+			//loadResources();
+			SceneManager.setScene("mainScene");
+			render();
+		}
+	};
+})();
+
+function init () {
+
+	// Renderer
+	if (Detector.webgl) {
+		renderer = new THREE.WebGLRenderer({
+			antialias: true
+		});
+		renderer.shadowMap.enabled = true;
+		renderer.shadowMapSoft = true;
+		renderer.shadowMapEnabled = true;
+		renderer.shadowMapSoft = true;
+		renderer.shadowMapType = THREE.PCFShadowMap;
+		renderer.shadowMapAutoUpdate = true;
+		renderer.autoClear = false;
+		renderer.setClearColor(0x000000);
+		renderer.setPixelRatio(window.devicePixelRatio);
+	}
+	else {
+		renderer = new THREE.CanvasRenderer()
+	}
+
+	var windowWidth =
+		window.innerWidth ||
+		document.documentElement.clientWidth ||
+		document.body.clientWidth;
+	var width = Math.min(windowWidth - (windowWidth * renderMarginWide), 800);
+	renderer.setSize(
+		width,
+		width * windowAspect);
+	$(".container").append(renderer.domElement);
+
+	ResourceManager.init();
+}
+
+function render (time) {
+	renderer.clear();
+	if (scene.simulatePhysics) {
+		scene.mainScene.simulate();
+	}
+	scene.time = time;
+	TWEEN.update(time);
+	renderer.render(scene.mainScene, scene.mainCamera);
+
+	if(typeof scene.HUDCamera !== typeof undefined && typeof scene.HUDScene !== typeof undefined) {
+		renderer.clearDepth();
+		renderer.render(scene.HUDScene, scene.HUDCamera);
+	}
+
+	// Request and process next frame
+	requestAnimationFrame(render);
+}
+
+
+//********//
+// Event Handlers
+
+$(window).resize(function () {
+	if (typeof renderer !== typeof undefined) {
+		var windowWidth =
+			window.innerWidth ||
+			document.documentElement.clientWidth ||
+			document.body.clientWidth;
+		var width = Math.min(windowWidth - (windowWidth * renderMarginWide), 800);
+		var height = width * windowAspect;
+		renderer.setSize(width,	height);
+	}
+
+	if (typeof scene !== typeof undefined) {
+		scene.mainCamera.aspect = width / height;
+		scene.mainCamera.updateProjectionMatrix();
+	}
+});
+
+$(document).ready(function() {
+	init();
+});
+
+//-->
+	</script>
+</head>
+<body>
+	<div class="container">
+	</div>
+</body>
+</html>
