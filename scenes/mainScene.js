@@ -1,71 +1,89 @@
 "use strict";
 
-// Scene
-
 var mainScene = function () {
+	var WORLD_WIDTH = renderer.domElement.width;
+	var WORLD_HEIGHT = renderer.domElement.height;
 
-	var self = this;
+	function Game() {
+		this._initMainCamera();
 
-	var mainScene = {};
-	var mainCamera = {};
-	var HUDCamera = {};
-	var HUDScene = {};
-	var time = 0;
+		this.mainScene = new Physijs.Scene();
+		this.mainScene.add(this.mainCamera);
 
-	init();
+		this.character = new Character([12, 24], [0, _bottom(24) + 20 + 12], new Color("grey"));
 
-	function init () {
-		self.mainScene = new Physijs.Scene({ fixedTimeStep: 1 / 120 });
+		this.blocks = [
+			//new Block([WORLD_WIDTH, 20], [0, _top(20)], new Color("grey")), // top
+			//new Block([20, WORLD_HEIGHT], [_right(20), 0], new Color("grey")), // right
+			new Block([WORLD_WIDTH, 20], [0, _bottom(20)], new Color("grey")), // bottom
+			//new Block([20, WORLD_HEIGHT], [_left(20), 0], new Color("grey")), // left
 
-		self.mainCamera = new THREE.PerspectiveCamera(50, renderer.domElement.width / renderer.domElement.height, 0.1, 1000);
+		];
 
-		// FPS View
-		self.mainCamera.position.x = 0;
-		self.mainCamera.position.y =-15;	// Depth
-		self.mainCamera.position.z = 0;
-		self.mainCamera.lookAt(new THREE.Vector3(1, 20, 0));
+		this.mainScene.add(this.character.mesh);
+		for (var i = 0, l = this.blocks.length; i < l; i++) {
+			this.mainScene.add(this.blocks[i].mesh);
+		}
 
-		// Aerial View
-		//self.mainCamera.position.x =-80;
-		//self.mainCamera.position.y = -100;	// Depth
-		//self.mainCamera.position.z = 0;
-		//self.mainCamera.lookAt(new THREE.Vector3(0, 10, 0));
-
-		// Physics
-		self.mainScene.setGravity(new THREE.Vector3(100, 0, 0));
-
-		// 3D Objects
-
-		// Lights
-		var primaryLight = new THREE.DirectionalLight(0xffffff, 1);
-		primaryLight.position.set(-1,-1,-1).normalize();
-		self.mainScene.add(primaryLight);
-
-		var secondaryLight = new THREE.DirectionalLight(0xffffff, .2);
-		secondaryLight.position.set(1, 1, 1).normalize();
-		self.mainScene.add(secondaryLight);
-		self.mainScene.add(new THREE.AmbientLight(0x555555));
-
-		// Environment
-		var floorMesh = new Physijs.BoxMesh(
-			new THREE.CubeGeometry(.1, 100, 200),
-			Physijs.createMaterial(
-				new THREE.MeshBasicMaterial({ color: 0xcccccc }),
-				.8,
-				1),
-			0);
-		floorMesh.position.x = 5;
-		floorMesh.position.y = 26;
-		floorMesh.position.z = 0;
-		floorMesh.receiveShadow = true;
-		floorMesh.castShadow = false;
-		self.mainScene.add(floorMesh);
-
-		// GUI
-		self.HUDScene = new THREE.Scene();
-
-		self.HUDCamera = new THREE.OrthographicCamera(0, 800, 0, -600, 0, 1);
-		self.HUDCamera.position.x = self.HUDCamera.position.y = 0;
-		self.HUDCamera.position.z = 1;
+		this.simulatePhysics = true;
+		this.mainScene.setGravity(calculateGravity(this.character, this.blocks));
 	}
+
+	Game.prototype._initMainCamera = function() {
+		this.mainCamera = new THREE.OrthographicCamera(
+			WORLD_WIDTH / - 2,
+			WORLD_WIDTH / 2,
+			WORLD_HEIGHT / 2,
+			WORLD_HEIGHT / - 2,
+			1,
+			1000
+		);
+
+		this.mainCamera.add(new THREE.PointLight(0xffffff, 1));
+		this.mainCamera.position.z = 400;
+	};
+
+	function Character(size, position, color) {
+		this.mesh = new Physijs.BoxMesh(
+			new THREE.BoxBufferGeometry(size[0], size[1], 12),
+			Physijs.createMaterial(new THREE.MeshLambertMaterial({ color: color.color }), .4, .6)
+		);
+
+		this.mesh.receiveShadow = this.mesh.castShadow = true;
+		this.mesh.position.set(position[0], position[1], 0);
+	}
+
+	function Block(size, position, color) {
+		this.mesh = new Physijs.BoxMesh(
+			new THREE.CubeGeometry(size[0], size[1], 48),
+			Physijs.createMaterial(new THREE.MeshLambertMaterial({ color: color.color }), .8, .4),
+			0 // mass, 0 is for zero gravity
+		);
+
+		this.mesh.receiveShadow = true;
+		this.mesh.castShadow = false;
+		this.mesh.position.set(position[0], position[1], 0);
+	}
+
+	function Color(name) {
+		this.name = name;
+		for (var key in Color.COLORS[this.name]) {
+			this[key] = Color.COLORS[this.name][key];
+		}
+	}
+
+	Color.COLORS = {
+		grey: { color: 0xcccccc }
+	}
+
+	function _top(height) { return _bottom(height) * -1; }
+	function _right(width) { return _left(width) * -1; }
+	function _bottom(height) { return (height - WORLD_HEIGHT) / 2; }
+	function _left(width) { return (width - WORLD_WIDTH) / 2; }
+
+	function calculateGravity(character, blocks) {
+		return new THREE.Vector3(0, -30, 0);
+	}
+
+	return new Game();
 };
