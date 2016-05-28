@@ -1,2 +1,0 @@
-# kongjam
-Kongregate Attractive Jam
