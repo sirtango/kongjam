@@ -2,9 +2,16 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
 	<title>Kongjam</title>
-	<style>
-	
+
+	<meta name="description" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+	<style type="text/css">
 .container {
 	position: absolute;
 	width: 100%;
@@ -15,7 +22,6 @@
 		width: 800px;
 	}
 }
-
 	</style>
 
 	<script type="text/javascript" src="libs/jquery.min.js"></script>
@@ -26,7 +32,7 @@
 	<script type="text/javascript" src="libs/Tween.js"></script>
 	<script type="text/javascript" src="libs/microcache.js"></script>
 
-	<!-- Scenes !-->
+	<!-- Scenes -->
 	<script type="text/javascript" src="scenes/mainScene.js"></script>
 
 	<script type="text/javascript">
@@ -40,10 +46,10 @@ Physijs.scripts.ammo	= "ammo.js";
 var renderer,
 	scene;		// current scene
 
-var requestAnimationFrame = 
-	window.requestAnimationFrame || 
-	window.mozRequestAnimationFrame || 
-	window.webkitRequestAnimationFrame || 
+var requestAnimationFrame =
+	window.requestAnimationFrame ||
+	window.mozRequestAnimationFrame ||
+	window.webkitRequestAnimationFrame ||
 	window.msRequestAnimationFrame;
 
 // Resize offset for full canvas
@@ -121,10 +127,8 @@ function init () {
 			antialias: true
 		});
 		renderer.shadowMap.enabled = true;
+		renderer.shadowMap.type = THREE.PCFShadowMap;
 		renderer.shadowMapSoft = true;
-		renderer.shadowMapEnabled = true;
-		renderer.shadowMapSoft = true;
-		renderer.shadowMapType = THREE.PCFShadowMap;
 		renderer.shadowMapAutoUpdate = true;
 		renderer.autoClear = false;
 		renderer.setClearColor(0x000000);
@@ -156,7 +160,7 @@ function render (time) {
 	TWEEN.update(time);
 	renderer.render(scene.mainScene, scene.mainCamera);
 
-	if(typeof scene.HUDCamera !== typeof undefined && typeof scene.HUDScene !== typeof undefined) {
+	if (typeof scene.HUDCamera !== typeof undefined && typeof scene.HUDScene !== typeof undefined) {
 		renderer.clearDepth();
 		renderer.render(scene.HUDScene, scene.HUDCamera);
 	}
@@ -186,7 +190,7 @@ $(window).resize(function () {
 	}
 });
 
-$(document).ready(function() {
+$(document).ready(function () {
 	init();
 });
 
