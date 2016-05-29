@@ -30,7 +30,7 @@ var mainScene = function () {
 
 	Game.prototype.simulatePhysics = true;
 
-	Game.prototype.keys = ["ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft"];
+	Game.prototype.jumpDuration = 120;
 
 	Game.prototype._initMainCamera = function() {
 		this.mainCamera = new THREE.OrthographicCamera(
@@ -49,7 +49,30 @@ var mainScene = function () {
 	};
 
 	Game.prototype.update = function(time) {
-		this.time = time;
+		var velocity = this.character.mesh.getLinearVelocity();
+		var walkingDirection = 0;
+
+		if (keyboard.pressed("left") || keyboard.pressed("a")) {
+			walkingDirection = -1;
+		} else if (keyboard.pressed("right") || keyboard.pressed("d")) {
+			walkingDirection = 1;
+		}
+		if (walkingDirection !== 0) {
+			velocity.x = Math.min(Math.max(velocity.x + (this.character.isJumping ? 3 : 30) * walkingDirection, -30), 30);
+		}
+
+		if (keyboard.pressed("up") || keyboard.pressed("w")) {
+			if (!this.character.isJumping) {
+				this.jumpTime = time;
+				this.character.isJumping = true;
+			}
+			if (this.jumpTime + this.jumpDuration > time) {
+				velocity.y += TWEEN.Easing.Back.Out((time - this.jumpTime) / this.jumpDuration) * 5;
+			}
+		}
+
+		this.character.mesh.setLinearVelocity(velocity);
+		this.character.mesh.setAngularVelocity(new THREE.Vector3(0, 0, 0)); // prevent the rotation of the character
 	};
 
 	function Character(size, position, color) {
@@ -63,7 +86,11 @@ var mainScene = function () {
 
 		this.time = performance.now();
 		this.velocity = new THREE.Vector3();
+
+		this.mesh.addEventListener("collision", function () { this.isJumping = false; }.bind(this));
 	}
+
+	Character.prototype.isJumping = false;
 
 	function Block(size, position, color) {
 		this.mesh = new Physijs.BoxMesh(
