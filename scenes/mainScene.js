@@ -1,7 +1,25 @@
 "use strict";
 
-// Scene
+var FixedCameraPosition = function (position, influenceRadius) {
+	var self = this;
 
+	init();
+
+	function init () {
+		//
+	}
+
+	return {
+		getPosition: function () {
+			return position;
+		},
+		update: function (playerPosition) {
+			return (playerPosition.distanceTo(position) <= influenceRadius);
+		}
+	};
+}
+
+// Scene
 var mainScene = function () {
 
 	var self = this;
@@ -11,6 +29,7 @@ var mainScene = function () {
 	var HUDCamera = {};
 	var HUDScene = {};
 	var time = 0;
+	var fixedCameraPosition = new FixedCameraPosition(new THREE.Vector3(10,-10,-50), 25);
 
 	init();
 
@@ -27,10 +46,10 @@ var mainScene = function () {
 		self.mainCamera.lookAt(new THREE.Vector3(0, 1, 0));
 
 		// Aerial View
-		//self.mainCamera.position.x = 50;
-		//self.mainCamera.position.y =-110;	// Depth
-		//self.mainCamera.position.z = 0;
-		//self.mainCamera.lookAt(new THREE.Vector3(0, 1, 0));
+		//self.mainCamera.position.x = 60;
+		//self.mainCamera.position.y =-130;	// Depth
+		//self.mainCamera.position.z =-50;
+		//self.mainCamera.lookAt(new THREE.Vector3(0, 1,-50));
 
 		// Physics
 		self.mainScene.setGravity(new THREE.Vector3(-100, 0, 0));
@@ -64,15 +83,54 @@ var mainScene = function () {
 		var floorMesh = new Physijs.BoxMesh(
 			new THREE.CubeGeometry(.1, 100, 200),
 			Physijs.createMaterial(
-				new THREE.MeshBasicMaterial({ color: 0xcccccc }),
+				new THREE.MeshBasicMaterial({ color: 0x999999 }),
 				.8,	// Friction
 				0	// Bounciness
 			),
 			0);
-		floorMesh.receiveShadow = true;
-		floorMesh.castShadow = false;
+		floorMesh.position.x = -1;
+		floorMesh.position.z = -50;
 		floorMesh.name = "FLOOR";
 		self.mainScene.add(floorMesh);
+
+		var anotherFloorMesh0 = new Physijs.BoxMesh(
+			new THREE.CubeGeometry(.1, 20, 10),
+			Physijs.createMaterial(
+				new THREE.MeshBasicMaterial({ color: 0x444444 }),
+				.8,	// Friction
+				0	// Bounciness
+			),
+			0);
+		anotherFloorMesh0.position.x = 0;
+		anotherFloorMesh0.position.z = -15;
+		anotherFloorMesh0.name = "FLOOR";
+		self.mainScene.add(anotherFloorMesh0);
+
+		var anotherFloorMesh1 = new Physijs.BoxMesh(
+			new THREE.CubeGeometry(.1, 20, 10),
+			Physijs.createMaterial(
+				new THREE.MeshBasicMaterial({ color: 0x333333 }),
+				.8,	// Friction
+				0	// Bounciness
+			),
+			0);
+		anotherFloorMesh1.position.x = 1;
+		anotherFloorMesh1.position.z = -20;
+		anotherFloorMesh1.name = "FLOOR";
+		self.mainScene.add(anotherFloorMesh1);
+
+		var anotherFloorMesh2 = new Physijs.BoxMesh(
+			new THREE.CubeGeometry(.1, 20, 18),
+			Physijs.createMaterial(
+				new THREE.MeshBasicMaterial({ color: 0x222222 }),
+				.8,	// Friction
+				0	// Bounciness
+			),
+			0);
+		anotherFloorMesh2.position.x = 3;
+		anotherFloorMesh2.position.z = -30;
+		anotherFloorMesh2.name = "FLOOR";
+		self.mainScene.add(anotherFloorMesh2);
 
 		var playerMesh = new Physijs.BoxMesh(
 			new THREE.BoxGeometry(2, 1, 1),
@@ -82,9 +140,6 @@ var mainScene = function () {
 				.5	// Bounciness
 			),
 			100);
-		playerMesh.position.x = 1;
-		playerMesh.receiveShadow = true;
-		playerMesh.castShadow = true;
 		playerMesh.name = "PLAYER";
 		playerMesh.userData.isJumping = false;
 		playerMesh.addEventListener("collision", function (obj) {
@@ -109,9 +164,17 @@ var mainScene = function () {
 	function followTarget (obj, target)
 	{
 		var targetPosition = new THREE.Vector3();
-		targetPosition.subVectors(target.position, self.mainCamera.userData.cameraRig);
+		targetPosition.subVectors(target, self.mainCamera.userData.cameraRig);
 		var normalizedDistance = obj.position.distanceTo(targetPosition) / 15; // <- max distance
 		obj.position.lerp(targetPosition, TWEEN.Easing.Cubic.In(Math.max(0, Math.min(normalizedDistance, 1))));
+	}
+
+	function followFixedTarget (obj, target)
+	{
+		var targetPosition = new THREE.Vector3();
+		targetPosition.subVectors(target, self.mainCamera.userData.cameraRig);
+		var normalizedDistance = obj.position.distanceTo(targetPosition) / 60; // <- max distance
+		obj.position.lerp(targetPosition, TWEEN.Easing.Linear.None(Math.max(0, Math.min(normalizedDistance, 1))));
 	}
 
 	return {
@@ -154,7 +217,12 @@ var mainScene = function () {
 			// prevent the rotation of the character
 			player.setAngularVelocity(new THREE.Vector3(0, 0, 0));
 
-			followTarget(self.mainCamera, player);
+			if (fixedCameraPosition.update(player.position)) {
+				followFixedTarget(self.mainCamera, fixedCameraPosition.getPosition());
+			}
+			else {
+				followTarget(self.mainCamera, player.position);
+			}
 		}
 	}
 };
