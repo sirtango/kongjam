@@ -77,7 +77,7 @@ var mainScene = function () {
 				this.character.color = new Color(this.colors[i]);
 				this.character.mesh.material.color.setHex(this.character.color.color);
 
-				var magnet = findMagnet(this.character, this.blocks);
+				var magnet = this.findMagnet();
 				var gravity = new THREE.Vector3(0, 0, 0);
 
 				if (magnet) {
@@ -93,6 +93,41 @@ var mainScene = function () {
 			this.character.mesh.lookAt(this.character.magnet.mesh.position);
 		}
 	};
+
+	Game.prototype.findMagnet = function() {
+		var characterColor = this.character.color.name;
+		var block, blockColor, found = [];
+
+		for (block in this.blocks) {
+			block = this.blocks[block];
+			blockColor = block.color.name;
+
+			if (characterColor === blockColor) {
+				found.push({
+					distance: this.character.mesh.position.distanceTo(block.mesh.position),
+					block: block
+				});
+			}
+		}
+
+		if (found.length === 1) {
+			return found.pop();
+		} else {
+			var closest = false;
+
+			for (var i = 0, l = found.length; i < l; i++) {
+				if (closest === false || found[i].distance < closest.distance) {
+					closest = found[i];
+				}
+			}
+
+			if (closest !== false) {
+				return closest;
+			}
+		}
+
+		return false;
+	}
 
 	function Character(size, position, color) {
 		this.color = color;
@@ -143,38 +178,6 @@ var mainScene = function () {
 	function _right(width) { return _left(width) * -1; }
 	function _bottom(height) { return (height - WORLD_HEIGHT) / 2; }
 	function _left(width) { return (width - WORLD_WIDTH) / 2; }
-
-	function findMagnet(character, blocks) {
-		var characterColor = character.color.name;
-		var block, blockColor, found = [];
-
-		for (block in blocks) {
-			block = blocks[block];
-			blockColor = block.color.name;
-
-			if (characterColor === blockColor) {
-				found.push({ distance: character.mesh.position.distanceTo(block.mesh.position), block: block });
-			}
-		}
-
-		if (found.length === 1) {
-			return found.pop();
-		} else {
-			var closest = false;
-
-			for (var i = 0, l = found.length; i < l; i++) {
-				if (closest === false || found[i].distance < closest.distance) {
-					closest = found[i];
-				}
-			}
-
-			if (closest !== false) {
-				return closest;
-			}
-		}
-
-		return false;
-	}
 
 	return new Game();
 };
