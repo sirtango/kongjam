@@ -108,7 +108,10 @@ var mainScene = function () {
 
 	function followTarget (obj, target)
 	{
-		obj.position.subVectors(target.position, self.mainCamera.userData.cameraRig);
+		var targetPosition = new THREE.Vector3();
+		targetPosition.subVectors(target.position, self.mainCamera.userData.cameraRig);
+		var normalizedDistance = obj.position.distanceTo(targetPosition) / 15; // <- max distance
+		obj.position.lerp(targetPosition, TWEEN.Easing.Cubic.In(Math.max(0, Math.min(normalizedDistance, 1))));
 	}
 
 	return {
@@ -131,8 +134,8 @@ var mainScene = function () {
 				walkingDirection = -1;
 			}
 			if (walkingDirection != 0) {//			   acceleration				   max speed
-				var accelerationForce = (player.userData.isJumping) ? 1.5 : 15; 
-				velocity.z = Math.min(Math.max(velocity.z + accelerationForce * walkingDirection, -15), 15);
+				var accelerationForce = (player.userData.isJumping) ? 1 : 1; 
+				velocity.z = Math.min(Math.max(velocity.z + accelerationForce * walkingDirection, -10), 10);
 			}
 
 			if (keyboard.pressed("up") || keyboard.pressed("w")) {
@@ -143,7 +146,7 @@ var mainScene = function () {
 
 				var jumpDuration = 120;
 				if (player.userData.jumpTime + jumpDuration > time) {
-					velocity.x += TWEEN.Easing.Back.Out((time - player.userData.jumpTime)/jumpDuration) * 5;
+					velocity.x += TWEEN.Easing.Back.Out((time - player.userData.jumpTime)/jumpDuration) * 4;
 				}
 			}
 

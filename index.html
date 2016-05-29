@@ -177,12 +177,12 @@ function render (time) {
 	renderer.clear();
 
 	scene.update(time);
+	TWEEN.update(time);
+	renderer.render(scene.mainScene, scene.mainCamera);
 	if (scene.simulatePhysics) {
 		scene.mainScene.simulate();
 	}
 	
-	TWEEN.update(time);
-	renderer.render(scene.mainScene, scene.mainCamera);
 
 	if(typeof scene.HUDCamera !== typeof undefined && typeof scene.HUDScene !== typeof undefined) {
 		renderer.clearDepth();
