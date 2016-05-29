@@ -15,24 +15,26 @@ var mainScene = function () {
 	init();
 
 	function init () {
+		self.simulatePhysics = true;
 		self.mainScene = new Physijs.Scene({ fixedTimeStep: 1 / 120 });
+		self.mainScene.setGravity(new THREE.Vector3(100, 0, 0));
 
 		self.mainCamera = new THREE.PerspectiveCamera(50, renderer.domElement.width / renderer.domElement.height, 0.1, 1000);
 
 		// FPS View
-		self.mainCamera.position.x = 0;
-		self.mainCamera.position.y =-15;	// Depth
-		self.mainCamera.position.z = 0;
-		self.mainCamera.lookAt(new THREE.Vector3(1, 20, 0));
+		//self.mainCamera.position.x = 1.5;
+		//self.mainCamera.position.y =-10;	// Depth
+		//self.mainCamera.position.z = 0;
+		//self.mainCamera.lookAt(new THREE.Vector3(0, 1, 0));
 
 		// Aerial View
-		//self.mainCamera.position.x =-80;
-		//self.mainCamera.position.y = -100;	// Depth
-		//self.mainCamera.position.z = 0;
-		//self.mainCamera.lookAt(new THREE.Vector3(0, 10, 0));
+		self.mainCamera.position.x = 50;
+		self.mainCamera.position.y =-110;	// Depth
+		self.mainCamera.position.z = 0;
+		self.mainCamera.lookAt(new THREE.Vector3(0, 1, 0));
 
 		// Physics
-		self.mainScene.setGravity(new THREE.Vector3(100, 0, 0));
+		self.mainScene.setGravity(new THREE.Vector3(-100, 0, 0));
 
 		// 3D Objects
 
@@ -46,6 +48,19 @@ var mainScene = function () {
 		self.mainScene.add(secondaryLight);
 		self.mainScene.add(new THREE.AmbientLight(0x555555));
 
+		// Skybox
+		var skyboxShader = THREE.ShaderLib["cube"];
+		skyboxShader.uniforms["tCube"].value = renderer._textureCache.get("starSkybox");
+
+		var skyboxMesh = new THREE.Mesh(
+			new THREE.BoxGeometry( 200, 200, 200 ),
+			new THREE.ShaderMaterial({
+				fragmentShader : skyboxShader.fragmentShader, vertexShader : skyboxShader.vertexShader,
+				uniforms : skyboxShader.uniforms, depthWrite : false, side : THREE.BackSide
+			})
+		);
+		self.mainScene.add(skyboxMesh);
+
 		// Environment
 		var floorMesh = new Physijs.BoxMesh(
 			new THREE.CubeGeometry(.1, 100, 200),
@@ -54,12 +69,32 @@ var mainScene = function () {
 				.8,
 				1),
 			0);
-		floorMesh.position.x = 5;
-		floorMesh.position.y = 26;
-		floorMesh.position.z = 0;
 		floorMesh.receiveShadow = true;
 		floorMesh.castShadow = false;
+		floorMesh.name = "FLOOR";
 		self.mainScene.add(floorMesh);
+
+		var playerMesh = new Physijs.BoxMesh(
+			new THREE.BoxGeometry(2, 1, 1),
+			Physijs.createMaterial(
+				new THREE.MeshBasicMaterial({ color: 0x00dd00 }),
+				.5,
+				0
+			),
+			100);
+		playerMesh.position.x = 1;
+		playerMesh.receiveShadow = true;
+		playerMesh.castShadow = true;
+		playerMesh.name = "PLAYER";
+		playerMesh.userData.isJumping = false;
+		playerMesh.addEventListener("collision", function (obj) {
+			if (obj.name == "FLOOR") {
+				renderer._modelCache.get("player").userData.isJumping = false;
+				console.log(renderer._modelCache.get("player").userData.isJumping);
+			}
+		});
+		renderer._modelCache.set("player", playerMesh);
+		self.mainScene.add(playerMesh);
 
 		// GUI
 		self.HUDScene = new THREE.Scene();
