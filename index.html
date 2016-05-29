@@ -31,6 +31,7 @@
 	<script type="text/javascript" src="libs/physi.js"></script>
 	<script type="text/javascript" src="libs/Tween.js"></script>
 	<script type="text/javascript" src="libs/microcache.js"></script>
+	<script type="text/javascript" src="libs/THREEx.KeyboardState.js"></script>
 
 	<!-- Scenes -->
 	<script type="text/javascript" src="scenes/mainScene.js"></script>
@@ -56,6 +57,8 @@ var requestAnimationFrame =
 var renderMarginWide = .015;
 var windowAspect = 600 / 800;
 
+var keyboard = new THREEx.KeyboardState();
+
 var SceneManager = (function () {
 	return {
 		setScene: function (sceneName) {
@@ -66,10 +69,24 @@ var SceneManager = (function () {
 
 var ResourceManager = (function () {
 	var loadingManager;
-	var textureLoader;
-	var JSONLoader;
+	var textureLoader,
+		cubeTextureLoader,
+		JSONLoader;
 
 	var textures = [];
+	var cubetextures = [
+		{
+			name: "starSkybox",
+			urls: [
+				"images/skybox/1.jpg",
+				"images/skybox/2.jpg",
+				"images/skybox/3.jpg",
+				"images/skybox/4.jpg",
+				"images/skybox/5.jpg",
+				"images/skybox/6.jpg"
+				]
+		}
+	];
 	var models = [];
 
 	function loadResources () {
@@ -79,6 +96,16 @@ var ResourceManager = (function () {
 					element 						// cache this item by its filename
 						.replace(/^.*[\\\/]/, "")	// remove folders from filename (basename)
 						.replace(/\.[^/.]+$/, ""),	// remove extension
+					loadedElement
+				);
+			})
+		});
+
+		cubetextures.forEach(function (element) {
+			cubeTextureLoader.load(element.urls, function (loadedElement) {
+				loadedElement.format = THREE.RGBFormat;
+				renderer._textureCache.getSet(
+					element.name,
 					loadedElement
 				);
 			})
@@ -100,21 +127,20 @@ var ResourceManager = (function () {
 		init: function () {
 			loadingManager = new THREE.LoadingManager();
 			loadingManager.onLoad = function () {
-				//SceneManager.setScene("mainScene");
-				//render();
+				SceneManager.setScene("mainScene");
+				render();
 			};
 			loadingManager.onProgress = function (item, loaded, total) {
 				self.loadedPercent = loaded / total;
 			};
 
 			textureLoader = new THREE.TextureLoader(loadingManager);
+			cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager);
 			JSONLoader = new THREE.JSONLoader(loadingManager);
 			renderer._textureCache = new MicroCache();
 			renderer._modelCache = new MicroCache();
 
-			//loadResources();
-			SceneManager.setScene("mainScene");
-			render();
+			loadResources();
 		}
 	};
 })();
@@ -153,12 +179,14 @@ function init () {
 
 function render (time) {
 	renderer.clear();
+
+	scene.update(time);
+	TWEEN.update(time);
+	renderer.render(scene.mainScene, scene.mainCamera);
 	if (scene.simulatePhysics) {
 		scene.mainScene.simulate();
 	}
-	scene.time = time;
-	TWEEN.update(time);
-	renderer.render(scene.mainScene, scene.mainCamera);
+	
 
 	if (typeof scene.HUDCamera !== typeof undefined && typeof scene.HUDScene !== typeof undefined) {
 		renderer.clearDepth();
