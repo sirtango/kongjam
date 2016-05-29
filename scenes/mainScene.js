@@ -25,9 +25,12 @@ var mainScene = function () {
 			this.mainScene.add(this.blocks[i].mesh);
 		}
 
-		this.simulatePhysics = true;
 		this.mainScene.setGravity(calculateGravity(this.character, this.blocks));
 	}
+
+	Game.prototype.simulatePhysics = true;
+
+	Game.prototype.keys = ["ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft"];
 
 	Game.prototype._initMainCamera = function() {
 		this.mainCamera = new THREE.OrthographicCamera(
@@ -40,7 +43,21 @@ var mainScene = function () {
 		);
 
 		this.mainCamera.add(new THREE.PointLight(0xffffff, 1));
-		this.mainCamera.position.z = 400;
+		//this.mainCamera.position.y = 90;
+		this.mainCamera.position.z = 300;
+		this.mainCamera.lookAt(new THREE.Vector3(0, 0, 0));
+	};
+
+	Game.prototype.keypress = function(key) {
+		var time = performance.now();
+		var delta = (time - this.character.time) / 1000;
+		switch (key) {
+			case "ArrowUp":
+				break;
+			case "ArrowRight":
+				this.character.velocity.x += 1;
+				break;
+		}
 	};
 
 	function Character(size, position, color) {
@@ -51,11 +68,14 @@ var mainScene = function () {
 
 		this.mesh.receiveShadow = this.mesh.castShadow = true;
 		this.mesh.position.set(position[0], position[1], 0);
+
+		this.time = performance.now();
+		this.velocity = new THREE.Vector3();
 	}
 
 	function Block(size, position, color) {
 		this.mesh = new Physijs.BoxMesh(
-			new THREE.CubeGeometry(size[0], size[1], 48),
+			new THREE.CubeGeometry(size[0], size[1], 210),
 			Physijs.createMaterial(new THREE.MeshLambertMaterial({ color: color.color }), .8, .4),
 			0 // mass, 0 is for zero gravity
 		);

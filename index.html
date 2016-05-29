@@ -185,12 +185,24 @@ $(window).resize(function () {
 			document.body.clientWidth;
 		var width = Math.min(windowWidth - (windowWidth * renderMarginWide), 800);
 		var height = width * windowAspect;
-		renderer.setSize(width,	height);
+		renderer.setSize(width, height);
 	}
 
 	if (typeof scene !== typeof undefined) {
 		scene.mainCamera.aspect = width / height;
 		scene.mainCamera.updateProjectionMatrix();
+	}
+});
+
+$(window).keypress(function (event) {
+	if (event.defaultPrevented) {
+		return;
+	}
+
+	if (typeof scene !== typeof undefined) {
+		if (typeof scene.keys === typeof [] && typeof scene.keypress === typeof function () {}) {
+			$.inArray(event.key, scene.keys) !== false && scene.keypress(event.key);
+		}
 	}
 });
 
