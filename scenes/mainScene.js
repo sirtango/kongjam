@@ -11,7 +11,6 @@ var mainScene = function () {
 	var HUDCamera = {};
 	var HUDScene = {};
 	var time = 0;
-	var jumpTime = 0;
 
 	init();
 
@@ -91,18 +90,25 @@ var mainScene = function () {
 		playerMesh.addEventListener("collision", function (obj) {
 			if (obj.name == "FLOOR") {
 				renderer._modelCache.get("player").userData.isJumping = false;
-				console.log(renderer._modelCache.get("player").userData.isJumping);
 			}
 		});
 		renderer._modelCache.set("player", playerMesh);
 		self.mainScene.add(playerMesh);
 
 		// GUI
-		self.HUDScene = new THREE.Scene();
+		//self.HUDScene = new THREE.Scene();
 
-		self.HUDCamera = new THREE.OrthographicCamera(0, 800, 0, -600, 0, 1);
-		self.HUDCamera.position.x = self.HUDCamera.position.y = 0;
-		self.HUDCamera.position.z = 1;
+		//self.HUDCamera = new THREE.OrthographicCamera(0, 800, 0, -600, 0, 1);
+		//self.HUDCamera.position.x = self.HUDCamera.position.y = 0;
+		//self.HUDCamera.position.z = 1;
+
+		self.mainCamera.userData.cameraRig = new THREE.Vector3();
+		self.mainCamera.userData.cameraRig.subVectors(playerMesh.position, self.mainCamera.position);
+	}
+
+	function followTarget (obj, target)
+	{
+		obj.position.subVectors(target.position, self.mainCamera.userData.cameraRig);
 	}
 
 	return {
@@ -125,25 +131,27 @@ var mainScene = function () {
 				walkingDirection = -1;
 			}
 			if (walkingDirection != 0) {//			   acceleration				   max speed
-				var accelerationForce = (player.userData.isJumping) ? 1 : 10; 
-				velocity.z = Math.min(Math.max(velocity.z + accelerationForce * walkingDirection, -10), 10);
+				var accelerationForce = (player.userData.isJumping) ? 1.5 : 15; 
+				velocity.z = Math.min(Math.max(velocity.z + accelerationForce * walkingDirection, -15), 15);
 			}
 
 			if (keyboard.pressed("up") || keyboard.pressed("w")) {
 				if (!player.userData.isJumping) {
-					jumpTime = time;
+					player.userData.jumpTime = time;
 					player.userData.isJumping = true;
 				}
 
 				var jumpDuration = 120;
-				if (jumpTime + jumpDuration > time) {
-					velocity.x += TWEEN.Easing.Back.Out((time - jumpTime)/jumpDuration) * 5;
+				if (player.userData.jumpTime + jumpDuration > time) {
+					velocity.x += TWEEN.Easing.Back.Out((time - player.userData.jumpTime)/jumpDuration) * 5;
 				}
 			}
 
 			player.setLinearVelocity(velocity);
 			// prevent the rotation of the character
 			player.setAngularVelocity(new THREE.Vector3(0, 0, 0));
+
+			followTarget(self.mainCamera, player);
 		}
 	}
 };
