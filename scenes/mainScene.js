@@ -156,9 +156,9 @@ var mainScene = function () {
 			0 // mass, 0 is for zero gravity
 		);
 
-		this.mesh.up = new THREE.Vector3(normal[0], normal[1], 0);
 		this.mesh.receiveShadow = true;
 		this.mesh.castShadow = false;
+		this.mesh.up.set(normal[0], normal[1], 0);
 		this.mesh.position.set(position[0], position[1], 0);
 	}
 
