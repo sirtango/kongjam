@@ -11,27 +11,27 @@ var mainScene = function () {
 	var HUDCamera = {};
 	var HUDScene = {};
 	var time = 0;
+	var jumpTime = 0;
 
 	init();
 
 	function init () {
-		self.simulatePhysics = true;
 		self.mainScene = new Physijs.Scene({ fixedTimeStep: 1 / 120 });
 		self.mainScene.setGravity(new THREE.Vector3(100, 0, 0));
 
 		self.mainCamera = new THREE.PerspectiveCamera(50, renderer.domElement.width / renderer.domElement.height, 0.1, 1000);
 
 		// FPS View
-		//self.mainCamera.position.x = 1.5;
-		//self.mainCamera.position.y =-10;	// Depth
-		//self.mainCamera.position.z = 0;
-		//self.mainCamera.lookAt(new THREE.Vector3(0, 1, 0));
-
-		// Aerial View
-		self.mainCamera.position.x = 50;
-		self.mainCamera.position.y =-110;	// Depth
+		self.mainCamera.position.x = 2;
+		self.mainCamera.position.y =-15;	// Depth
 		self.mainCamera.position.z = 0;
 		self.mainCamera.lookAt(new THREE.Vector3(0, 1, 0));
+
+		// Aerial View
+		//self.mainCamera.position.x = 50;
+		//self.mainCamera.position.y =-110;	// Depth
+		//self.mainCamera.position.z = 0;
+		//self.mainCamera.lookAt(new THREE.Vector3(0, 1, 0));
 
 		// Physics
 		self.mainScene.setGravity(new THREE.Vector3(-100, 0, 0));
@@ -66,8 +66,9 @@ var mainScene = function () {
 			new THREE.CubeGeometry(.1, 100, 200),
 			Physijs.createMaterial(
 				new THREE.MeshBasicMaterial({ color: 0xcccccc }),
-				.8,
-				1),
+				.8,	// Friction
+				0	// Bounciness
+			),
 			0);
 		floorMesh.receiveShadow = true;
 		floorMesh.castShadow = false;
@@ -78,8 +79,8 @@ var mainScene = function () {
 			new THREE.BoxGeometry(2, 1, 1),
 			Physijs.createMaterial(
 				new THREE.MeshBasicMaterial({ color: 0x00dd00 }),
-				.5,
-				0
+				.5,	// Friction
+				.5	// Bounciness
 			),
 			100);
 		playerMesh.position.x = 1;
@@ -102,5 +103,47 @@ var mainScene = function () {
 		self.HUDCamera = new THREE.OrthographicCamera(0, 800, 0, -600, 0, 1);
 		self.HUDCamera.position.x = self.HUDCamera.position.y = 0;
 		self.HUDCamera.position.z = 1;
+	}
+
+	return {
+		mainScene: self.mainScene,
+		mainCamera: self.mainCamera,
+//		HUDCamera: self.HUDCamera,
+//		HUDScene: self.HUDScene,
+		simulatePhysics: true,
+
+		update: function (time) {
+			self.time = time;
+			var walkingDirection = 0;
+			var player = renderer._modelCache.get("player");
+			var velocity = player.getLinearVelocity();
+
+			if (keyboard.pressed("left") || keyboard.pressed("a")) {
+				walkingDirection = 1;
+			}
+			else if (keyboard.pressed("right") || keyboard.pressed("d")) {
+				walkingDirection = -1;
+			}
+			if (walkingDirection != 0) {//			   acceleration				   max speed
+				var accelerationForce = (player.userData.isJumping) ? 1 : 10; 
+				velocity.z = Math.min(Math.max(velocity.z + accelerationForce * walkingDirection, -10), 10);
+			}
+
+			if (keyboard.pressed("up") || keyboard.pressed("w")) {
+				if (!player.userData.isJumping) {
+					jumpTime = time;
+					player.userData.isJumping = true;
+				}
+
+				var jumpDuration = 120;
+				if (jumpTime + jumpDuration > time) {
+					velocity.x += TWEEN.Easing.Back.Out((time - jumpTime)/jumpDuration) * 5;
+				}
+			}
+
+			player.setLinearVelocity(velocity);
+			// prevent the rotation of the character
+			player.setAngularVelocity(new THREE.Vector3(0, 0, 0));
+		}
 	}
 };
