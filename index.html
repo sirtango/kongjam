@@ -12,6 +12,10 @@
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 	<style type="text/css">
+body {
+  background-color: black;
+}
+
 .container {
 	position: absolute;
 	width: 100%;
@@ -31,6 +35,7 @@
 	<script type="text/javascript" src="libs/physi.js"></script>
 	<script type="text/javascript" src="libs/Tween.js"></script>
 	<script type="text/javascript" src="libs/microcache.js"></script>
+	<script type="text/javascript" src="libs/THREEx.KeyboardState.js"></script>
 
 	<!-- Scenes -->
 	<script type="text/javascript" src="scenes/mainScene.js"></script>
@@ -55,6 +60,8 @@ var requestAnimationFrame =
 // Resize offset for full canvas
 var renderMarginWide = .015;
 var windowAspect = 600 / 800;
+
+var keyboard = new THREEx.KeyboardState();
 
 var SceneManager = (function () {
 	return {
@@ -153,10 +160,11 @@ function init () {
 
 function render (time) {
 	renderer.clear();
+	scene.update(time);
 	if (scene.simulatePhysics) {
 		scene.mainScene.simulate();
 	}
-	scene.time = time;
+
 	TWEEN.update(time);
 	renderer.render(scene.mainScene, scene.mainCamera);
 
@@ -181,7 +189,7 @@ $(window).resize(function () {
 			document.body.clientWidth;
 		var width = Math.min(windowWidth - (windowWidth * renderMarginWide), 800);
 		var height = width * windowAspect;
-		renderer.setSize(width,	height);
+		renderer.setSize(width, height);
 	}
 
 	if (typeof scene !== typeof undefined) {
