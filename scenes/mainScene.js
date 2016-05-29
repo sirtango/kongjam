@@ -25,8 +25,6 @@ var mainScene = function () {
 		for (var i = 0, l = this.blocks.length; i < l; i++) {
 			this.mainScene.add(this.blocks[i].mesh);
 		}
-
-		this.mainScene.setGravity(calculateGravity(this.character, this.blocks));
 	}
 
 	Game.prototype.simulatePhysics = true;
@@ -45,7 +43,6 @@ var mainScene = function () {
 
 		this.mainCamera.add(new THREE.PointLight(0xffffff, 1));
 		this.mainCamera.position.z = 300;
-		this.mainCamera.lookAt(new THREE.Vector3(0, 0, 0));
 	};
 
 	Game.prototype.update = function(time) {
@@ -80,8 +77,20 @@ var mainScene = function () {
 				this.character.color = new Color(this.colors[i]);
 				this.character.mesh.material.color.setHex(this.character.color.color);
 
-				this.mainScene.setGravity(calculateGravity(this.character, this.blocks));
+				var magnet = findMagnet(this.character, this.blocks);
+				var gravity = new THREE.Vector3(0, 0, 0);
+
+				if (magnet) {
+					this.character.magnet = magnet.block;
+					gravity = magnet.block.mesh.up.clone().negate().multiplyScalar(90);
+				}
+
+				this.mainScene.setGravity(gravity);
 			}
+		}
+
+		if (typeof this.character.magnet !== typeof undefined) {
+			this.character.mesh.lookAt(this.character.magnet.mesh.position);
 		}
 	};
 
@@ -135,7 +144,7 @@ var mainScene = function () {
 	function _bottom(height) { return (height - WORLD_HEIGHT) / 2; }
 	function _left(width) { return (width - WORLD_WIDTH) / 2; }
 
-	function calculateGravity(character, blocks) {
+	function findMagnet(character, blocks) {
 		var characterColor = character.color.name;
 		var block, blockColor, found = [];
 
@@ -149,7 +158,7 @@ var mainScene = function () {
 		}
 
 		if (found.length === 1) {
-			return found.pop().block.mesh.up.clone().negate().multiplyScalar(90);
+			return found.pop();
 		} else {
 			var closest = false;
 
@@ -160,11 +169,11 @@ var mainScene = function () {
 			}
 
 			if (closest !== false) {
-				return closest.block.mesh.up.clone().negate().multiplyScalar(30);
+				return closest;
 			}
 		}
 
-		return new THREE.Vector3(0, 0, 0);
+		return false;
 	}
 
 	return new Game();
