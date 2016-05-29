@@ -48,20 +48,8 @@ var mainScene = function () {
 		this.mainCamera.lookAt(new THREE.Vector3(0, 0, 0));
 	};
 
-	Game.prototype.keypress = function(key) {
-		var time = performance.now();
-		var delta = (time - this.character.time) / 1000;
-		switch (key) {
-			case "ArrowUp":
-				break;
-			case "ArrowRight":
-				this.character.velocity.x += 1;
-				break;
-		}
-	};
-
 	Game.prototype.update = function(time) {
-		//
+		this.time = time;
 	};
 
 	function Character(size, position, color) {
