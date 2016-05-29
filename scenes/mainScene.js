@@ -60,6 +60,10 @@ var mainScene = function () {
 		}
 	};
 
+	Game.prototype.update = function(time) {
+		//
+	};
+
 	function Character(size, position, color) {
 		this.mesh = new Physijs.BoxMesh(
 			new THREE.BoxBufferGeometry(size[0], size[1], 12),

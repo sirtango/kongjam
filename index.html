@@ -157,10 +157,11 @@ function init () {
 
 function render (time) {
 	renderer.clear();
+	scene.update(time);
 	if (scene.simulatePhysics) {
 		scene.mainScene.simulate();
 	}
-	scene.time = time;
+
 	TWEEN.update(time);
 	renderer.render(scene.mainScene, scene.mainCamera);
 
