@@ -81,6 +81,7 @@ var mainScene = function () {
 				var gravity = new THREE.Vector3(0, 0, 0);
 
 				if (magnet) {
+					this.character.isJumping = true;
 					this.character.magnet = magnet.block;
 					gravity = magnet.block.mesh.up.clone().negate().multiplyScalar(90);
 				}
