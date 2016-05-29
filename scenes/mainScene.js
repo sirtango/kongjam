@@ -58,7 +58,7 @@ var mainScene = function () {
 			velocity.x = Math.min(Math.max(velocity.x + (this.character.isJumping ? 3 : 30) * walkingDirection, -30), 30);
 		}
 
-		if (keyboard.pressed("up") || keyboard.pressed("w")) {
+		if (keyboard.pressed("space")) {
 			if (!this.character.isJumping) {
 				this.jumpTime = time;
 				this.character.isJumping = true;
