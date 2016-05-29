@@ -25,13 +25,13 @@ var mainScene = function () {
 		for (var i = 0, l = this.blocks.length; i < l; i++) {
 			this.mainScene.add(this.blocks[i].mesh);
 		}
+
+		this.setCharacterColor("grey");
 	}
 
 	Game.prototype.simulatePhysics = true;
 
-	Game.prototype.jumpDuration = 120;
-
-	Game.prototype._initMainCamera = function() {
+	Game.prototype._initMainCamera = function () {
 		this.mainCamera = new THREE.OrthographicCamera(
 			WORLD_WIDTH / - 2,
 			WORLD_WIDTH / 2,
@@ -45,26 +45,30 @@ var mainScene = function () {
 		this.mainCamera.position.z = 300;
 	};
 
-	Game.prototype.update = function(time) {
+	Game.prototype.update = function (time) {
 		var velocity = this.character.mesh.getLinearVelocity();
 		var walkingDirection = 0;
 
-		if (keyboard.pressed("left") || keyboard.pressed("a")) {
-			walkingDirection = -1;
-		} else if (keyboard.pressed("right") || keyboard.pressed("d")) {
+		if (keyboard.pressed("left")) {
 			walkingDirection = 1;
+		} else if (keyboard.pressed("right")) {
+			walkingDirection = -1;
 		}
 		if (walkingDirection !== 0) {
-			velocity.x = Math.min(Math.max(velocity.x + (this.character.isJumping ? 3 : 30) * walkingDirection, -30), 30);
+			//velocity.x = Math.min(Math.max(velocity.x + 30 * walkingDirection * this.character.magnet.mesh.up.y, -30), 30);
+			//velocity.y = Math.min(Math.max(velocity.x + 30 * walkingDirection * this.character.magnet.mesh.up.x, -30), 30);
 		}
 
 		if (keyboard.pressed("space")) {
 			if (!this.character.isJumping) {
-				this.jumpTime = time;
+				this.character.jumpTime = time;
 				this.character.isJumping = true;
 			}
-			if (this.jumpTime + this.jumpDuration > time) {
-				velocity.y += TWEEN.Easing.Back.Out((time - this.jumpTime) / this.jumpDuration) * 5;
+			if (this.character.jumpTime + this.character.jumpDuration > time) {
+				var effect = TWEEN.Easing.Back.Out((time - this.character.jumpTime) / this.character.jumpDuration);
+
+				velocity.x += effect * this.character.magnet.mesh.up.x * 15;
+				velocity.y += effect * this.character.magnet.mesh.up.y * 15;
 			}
 		}
 
@@ -74,28 +78,32 @@ var mainScene = function () {
 
 		for (var i = 0, l = this.colors.length; i < l; i++) {
 			if (keyboard.pressed((i + 1).toString())) {
-				this.character.color = new Color(this.colors[i]);
-				this.character.mesh.material.color.setHex(this.character.color.color);
-
-				var magnet = this.findMagnet();
-				var gravity = new THREE.Vector3(0, 0, 0);
-
-				if (magnet) {
-					this.character.isJumping = true;
-					this.character.magnet = magnet.block;
-					gravity = magnet.block.mesh.up.clone().negate().multiplyScalar(90);
-				}
-
-				this.mainScene.setGravity(gravity);
+				this.setCharacterColor(this.colors[i]);
 			}
 		}
 
-		if (typeof this.character.magnet !== typeof undefined) {
-			this.character.mesh.lookAt(this.character.magnet.mesh.position);
-		}
+		this.character.mesh.rotation.z = this.character.magnetAngle;
 	};
 
-	Game.prototype.findMagnet = function() {
+	Game.prototype.setCharacterColor = function (name) {
+		this.character.color = new Color(name);
+		this.character.mesh.material.color.setHex(this.character.color.color);
+
+		var magnet = this.findMagnet();
+		var gravity = new THREE.Vector3(0, 0, 0);
+
+		if (magnet) {
+			this.character.isJumping = true;
+			this.character.magnet = magnet.block;
+			this.character.magnetAngle = magnet.angle;
+
+			gravity = magnet.block.mesh.up.clone().negate().multiplyScalar(90);
+		}
+
+		this.mainScene.setGravity(gravity);
+	};
+
+	Game.prototype.findMagnet = function () {
 		var characterColor = this.character.color.name;
 		var block, blockColor, found = [];
 
@@ -106,6 +114,7 @@ var mainScene = function () {
 			if (characterColor === blockColor) {
 				found.push({
 					distance: this.character.mesh.position.distanceTo(block.mesh.position),
+					angle: this.character.mesh.up.angleTo(block.mesh.up),
 					block: block
 				});
 			}
@@ -128,7 +137,7 @@ var mainScene = function () {
 		}
 
 		return false;
-	}
+	};
 
 	function Character(size, position, color) {
 		this.color = color;
@@ -147,6 +156,8 @@ var mainScene = function () {
 	}
 
 	Character.prototype.isJumping = false;
+
+	Character.prototype.jumpDuration = 120;
 
 	function Magnet(normal, size, position, color) {
 		this.color = color;
