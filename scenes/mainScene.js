@@ -13,12 +13,13 @@ var mainScene = function () {
 		this.character = new Character([12, 24], [0, _bottom(24) + 20 + 12], new Color("grey"));
 
 		this.blocks = [
-			//new Block([WORLD_WIDTH, 20], [0, _top(20)], new Color("grey")), // top
-			//new Block([20, WORLD_HEIGHT], [_right(20), 0], new Color("grey")), // right
-			new Block([WORLD_WIDTH, 20], [0, _bottom(20)], new Color("grey")), // bottom
-			//new Block([20, WORLD_HEIGHT], [_left(20), 0], new Color("grey")), // left
-
+			new Magnet([-1, 0], [20, WORLD_HEIGHT], [_right(20), 0], new Color("red")), // right
+			new Magnet([1, 0], [20, WORLD_HEIGHT], [_left(20), 0], new Color("blue")), // left
+			new Magnet([0, -1], [WORLD_WIDTH, 20], [0, _top(20)], new Color("grey")), // top
+			new Magnet([0, 1], [WORLD_WIDTH, 20], [0, _bottom(20)], new Color("grey")), // bottom
 		];
+
+		this.colors = ["grey", "red", "blue"];
 
 		this.mainScene.add(this.character.mesh);
 		for (var i = 0, l = this.blocks.length; i < l; i++) {
@@ -43,7 +44,6 @@ var mainScene = function () {
 		);
 
 		this.mainCamera.add(new THREE.PointLight(0xffffff, 1));
-		//this.mainCamera.position.y = 90;
 		this.mainCamera.position.z = 300;
 		this.mainCamera.lookAt(new THREE.Vector3(0, 0, 0));
 	};
@@ -71,11 +71,22 @@ var mainScene = function () {
 			}
 		}
 
+		this.character.mesh.__dirtyPosition = true;
 		this.character.mesh.setLinearVelocity(velocity);
 		this.character.mesh.setAngularVelocity(new THREE.Vector3(0, 0, 0)); // prevent the rotation of the character
+
+		for (var i = 0, l = this.colors.length; i < l; i++) {
+			if (keyboard.pressed((i + 1).toString())) {
+				this.character.color = new Color(this.colors[i]);
+				this.character.mesh.material.color.setHex(this.character.color.color);
+
+				this.mainScene.setGravity(calculateGravity(this.character, this.blocks));
+			}
+		}
 	};
 
 	function Character(size, position, color) {
+		this.color = color;
 		this.mesh = new Physijs.BoxMesh(
 			new THREE.BoxBufferGeometry(size[0], size[1], 12),
 			Physijs.createMaterial(new THREE.MeshLambertMaterial({ color: color.color }), .4, .6)
@@ -92,13 +103,15 @@ var mainScene = function () {
 
 	Character.prototype.isJumping = false;
 
-	function Block(size, position, color) {
+	function Magnet(normal, size, position, color) {
+		this.color = color;
 		this.mesh = new Physijs.BoxMesh(
 			new THREE.CubeGeometry(size[0], size[1], 210),
 			Physijs.createMaterial(new THREE.MeshLambertMaterial({ color: color.color }), .8, .4),
 			0 // mass, 0 is for zero gravity
 		);
 
+		this.mesh.up = new THREE.Vector3(normal[0], normal[1], 0);
 		this.mesh.receiveShadow = true;
 		this.mesh.castShadow = false;
 		this.mesh.position.set(position[0], position[1], 0);
@@ -112,7 +125,9 @@ var mainScene = function () {
 	}
 
 	Color.COLORS = {
-		grey: { color: 0xcccccc }
+		grey: { color: 0xcccccc },
+		red:  { color: 0xff0000 },
+		blue: { color: 0x0000ff },
 	}
 
 	function _top(height) { return _bottom(height) * -1; }
@@ -121,7 +136,35 @@ var mainScene = function () {
 	function _left(width) { return (width - WORLD_WIDTH) / 2; }
 
 	function calculateGravity(character, blocks) {
-		return new THREE.Vector3(0, -30, 0);
+		var characterColor = character.color.name;
+		var block, blockColor, found = [];
+
+		for (block in blocks) {
+			block = blocks[block];
+			blockColor = block.color.name;
+
+			if (characterColor === blockColor) {
+				found.push({ distance: character.mesh.position.distanceTo(block.mesh.position), block: block });
+			}
+		}
+
+		if (found.length === 1) {
+			return found.pop().block.mesh.up.clone().negate().multiplyScalar(90);
+		} else {
+			var closest = false;
+
+			for (var i = 0, l = found.length; i < l; i++) {
+				if (closest === false || found[i].distance < closest.distance) {
+					closest = found[i];
+				}
+			}
+
+			if (closest !== false) {
+				return closest.block.mesh.up.clone().negate().multiplyScalar(30);
+			}
+		}
+
+		return new THREE.Vector3(0, 0, 0);
 	}
 
 	return new Game();
