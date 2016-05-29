@@ -10,23 +10,23 @@ var mainScene = function () {
 		this.mainScene = new Physijs.Scene();
 		this.mainScene.add(this.mainCamera);
 
-		this.character = new Character([12, 24], [0, _bottom(24) + 20 + 12], new Color("grey"));
+		this.character = new Character(12, 24, 0, _bottom(24) + 20 + 12, "grey");
 
 		this.blocks = [
-			new Magnet([-1, 0], [20, WORLD_HEIGHT], [_right(20), 0], new Color("red")), // right
-			new Magnet([1, 0], [20, WORLD_HEIGHT], [_left(20), 0], new Color("blue")), // left
-			new Magnet([0, -1], [WORLD_WIDTH, 20], [0, _top(20)], new Color("grey")), // top
-			new Magnet([0, 1], [WORLD_WIDTH, 20], [0, _bottom(20)], new Color("grey")), // bottom
+			new Magnet(20, WORLD_WIDTH, _right(20), 0, "red"),
+			new Magnet(20, WORLD_WIDTH, _left(20), 0, "blue"),
+			new Magnet(WORLD_WIDTH, 20, 0, _top(20), "grey"),
+			new Magnet(WORLD_WIDTH, 20, 0, _bottom(20), "grey"),
 		];
 
-		this.colors = ["grey", "red", "blue"];
+		this.colors = ["grey", "red", "blue", "yellow"];
 
 		this.mainScene.add(this.character.mesh);
 		for (var i = 0, l = this.blocks.length; i < l; i++) {
 			this.mainScene.add(this.blocks[i].mesh);
 		}
 
-		this.setCharacterColor("grey");
+		this.mainScene.setGravity(new THREE.Vector3());
 	}
 
 	Game.prototype.simulatePhysics = true;
@@ -46,77 +46,64 @@ var mainScene = function () {
 	};
 
 	Game.prototype.update = function (time) {
-		var velocity = this.character.mesh.getLinearVelocity();
-		var walkingDirection = 0;
-
-		if (keyboard.pressed("left")) {
-			walkingDirection = 1;
-		} else if (keyboard.pressed("right")) {
-			walkingDirection = -1;
-		}
-		if (walkingDirection !== 0) {
-			//velocity.x = Math.min(Math.max(velocity.x + 30 * walkingDirection * this.character.magnet.mesh.up.y, -30), 30);
-			//velocity.y = Math.min(Math.max(velocity.x + 30 * walkingDirection * this.character.magnet.mesh.up.x, -30), 30);
-		}
-
-		if (keyboard.pressed("space")) {
-			if (!this.character.isJumping) {
-				this.character.jumpTime = time;
-				this.character.isJumping = true;
-			}
-			if (this.character.jumpTime + this.character.jumpDuration > time) {
-				var effect = TWEEN.Easing.Back.Out((time - this.character.jumpTime) / this.character.jumpDuration);
-
-				velocity.x += effect * this.character.magnet.mesh.up.x * 15;
-				velocity.y += effect * this.character.magnet.mesh.up.y * 15;
-			}
-		}
+		this.mainCamera.updateMatrixWorld();
 
 		this.character.mesh.__dirtyPosition = true;
-		this.character.mesh.setLinearVelocity(velocity);
 		this.character.mesh.setAngularVelocity(new THREE.Vector3(0, 0, 0)); // prevent the rotation of the character
+
+		if (keyboard.pressed("space")) {
+			this.character.jump(time);
+		}
 
 		for (var i = 0, l = this.colors.length; i < l; i++) {
 			if (keyboard.pressed((i + 1).toString())) {
-				this.setCharacterColor(this.colors[i]);
+				this.character.setColor(this.colors[i]);
+				this.character.isJumping = true;
 			}
 		}
 
-		this.character.mesh.rotation.z = this.character.magnetAngle;
-	};
+		this.character.magnet = this.findMagnet();
 
-	Game.prototype.setCharacterColor = function (name) {
-		this.character.color = new Color(name);
-		this.character.mesh.material.color.setHex(this.character.color.color);
-
-		var magnet = this.findMagnet();
-		var gravity = new THREE.Vector3(0, 0, 0);
-
-		if (magnet) {
-			this.character.isJumping = true;
-			this.character.magnet = magnet.block;
-			this.character.magnetAngle = magnet.angle;
-
-			gravity = magnet.block.mesh.up.clone().negate().multiplyScalar(90);
+		if (this.character.magnet) {
+			this.character.mesh.rotation.z = this.character.magnet.angle;
+			this.mainScene.setGravity(this.character.magnet.gravity.multiplyScalar(90));
 		}
-
-		this.mainScene.setGravity(gravity);
 	};
+
+	Game.prototype.findMagnetDirections = [
+		new THREE.Vector3(0, 1, 0),
+		new THREE.Vector3(1, 1, 0),
+		new THREE.Vector3(1, 0, 0),
+		new THREE.Vector3(0, -1, 0),
+		new THREE.Vector3(-1, -1, 0),
+		new THREE.Vector3(-1, 0, 0),
+		new THREE.Vector3(-1, 1, 0),
+	];
 
 	Game.prototype.findMagnet = function () {
-		var characterColor = this.character.color.name;
-		var block, blockColor, found = [];
+		var block, found = [], direction, raycaster, intersect;
 
 		for (block in this.blocks) {
 			block = this.blocks[block];
-			blockColor = block.color.name;
 
-			if (characterColor === blockColor) {
-				found.push({
-					distance: this.character.mesh.position.distanceTo(block.mesh.position),
-					angle: this.character.mesh.up.angleTo(block.mesh.up),
-					block: block
-				});
+			if (this.character.color.name !== block.color.name) {
+				continue;
+			}
+
+			for (direction in this.findMagnetDirections) {
+				direction = this.findMagnetDirections[direction];
+				raycaster = new THREE.Raycaster(this.character.mesh.position, direction);
+				intersect = raycaster.intersectObject(block.mesh);
+
+				if (intersect.length > 0) {
+					intersect = intersect.pop();
+					intersect.block = block;
+					intersect.angle = direction.angleTo(this.character.mesh.up);
+					intersect.gravity = intersect.point.clone().sub(this.character.mesh.position).normalize();
+					intersect.direction = direction;
+
+					found.push(intersect);
+				}
 			}
 		}
 
@@ -139,19 +126,16 @@ var mainScene = function () {
 		return false;
 	};
 
-	function Character(size, position, color) {
-		this.color = color;
-		this.mesh = new Physijs.BoxMesh(
-			new THREE.BoxBufferGeometry(size[0], size[1], 12),
-			Physijs.createMaterial(new THREE.MeshLambertMaterial({ color: color.color }), .4, .6)
+	function Character(width, height, x, y, color) {
+		this.color = new Color(color);
+		this.mesh = new Physijs.BoxMesh(new THREE.CubeGeometry(width, height, 12),
+			Physijs.createMaterial(new THREE.MeshLambertMaterial({ color: this.color.hex }), .4, .6)
 		);
 
+		this.mesh.position.setX(x);
+		this.mesh.position.setY(y);
+
 		this.mesh.receiveShadow = this.mesh.castShadow = true;
-		this.mesh.position.set(position[0], position[1], 0);
-
-		this.time = performance.now();
-		this.velocity = new THREE.Vector3();
-
 		this.mesh.addEventListener("collision", function () { this.isJumping = false; }.bind(this));
 	}
 
@@ -159,18 +143,41 @@ var mainScene = function () {
 
 	Character.prototype.jumpDuration = 120;
 
-	function Magnet(normal, size, position, color) {
-		this.color = color;
-		this.mesh = new Physijs.BoxMesh(
-			new THREE.CubeGeometry(size[0], size[1], 210),
-			Physijs.createMaterial(new THREE.MeshLambertMaterial({ color: color.color }), .8, .4),
+	Character.prototype.jump = function (time) {
+		var velocity = this.mesh.getLinearVelocity();
+
+		if (this.isJumping === false) {
+			this.isJumping = true;
+			this.jumpTime = time;
+		}
+
+		if (this.jumpTime + this.jumpDuration > time) {
+			var effect = TWEEN.Easing.Back.Out((time - this.jumpTime) / this.jumpDuration);
+
+			velocity.x += effect * this.magnet.direction.x * -10;
+			velocity.y += effect * this.magnet.direction.y * -10;
+		}
+
+		this.mesh.setLinearVelocity(velocity);
+	};
+
+	Character.prototype.setColor = function (color) {
+		this.color = new Color(color);
+		this.mesh.material.color.setHex(this.color.hex);
+	};
+
+	function Magnet(width, height, x, y, color) {
+		this.color = new Color(color);
+		this.mesh = new Physijs.BoxMesh(new THREE.CubeGeometry(width, height, 210),
+			Physijs.createMaterial(new THREE.MeshLambertMaterial({ color: this.color.hex }), .8, .4),
 			0 // mass, 0 is for zero gravity
 		);
 
+		this.mesh.position.setX(x);
+		this.mesh.position.setY(y);
+
 		this.mesh.receiveShadow = true;
 		this.mesh.castShadow = false;
-		this.mesh.up.set(normal[0], normal[1], 0);
-		this.mesh.position.set(position[0], position[1], 0);
 	}
 
 	function Color(name) {
@@ -181,9 +188,10 @@ var mainScene = function () {
 	}
 
 	Color.COLORS = {
-		grey: { color: 0xcccccc },
-		red:  { color: 0xff0000 },
-		blue: { color: 0x0000ff },
+		grey:   { hex: 0xcccccc },
+		red:    { hex: 0xff0000 },
+		blue:   { hex: 0x0000ff },
+		yellow: { hex: 0xffff00 },
 	}
 
 	function _top(height) { return _bottom(height) * -1; }
